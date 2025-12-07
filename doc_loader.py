@@ -5,6 +5,8 @@ from langchain_openai import OpenAIEmbeddings
 import faiss
 from langchain_community.docstore.in_memory import InMemoryDocstore
 from langchain_community.vectorstores import FAISS
+from langchain_community.document_loaders import PyPDFLoader
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 
 if not os.environ.get('OPENAI_API_KEY'):
@@ -24,3 +26,19 @@ vector_store = FAISS(
     index_to_docstore_id={},
 )
 
+file_path = './files/nke-10k-2023.pdf'
+loader = PyPDFLoader(file_path)
+docs = loader.load()
+
+text_spliter = RecursiveCharacterTextSplitter(
+    chunk_size=1000,
+    chunk_overlap=200,
+    add_start_index=True
+)
+
+all_splits = text_spliter.split_documents(docs)
+
+print(f"Split blog post into {len(all_splits)} sub-documents.")
+
+document_ids = vector_store.add_documents(documents=all_splits)
+print(document_ids[:3])
