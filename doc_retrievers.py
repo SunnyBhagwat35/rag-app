@@ -22,10 +22,12 @@ if __name__ == "__main__":
     print("Creating Agent")
     agent = create_agent(model, tools, system_prompt=prompt)
     print("Agent Created.")
-    query = (
-        "What is the standard method for Task Decomposition?\n\n"
-        "Once you get the answer, look up common extensions of that method."
-    )
+    # query = (
+    #     "What is the standard method for Task Decomposition?\n\n"
+    #     "Once you get the answer, look up common extensions of that method."
+    # )
+    
+    query = ("What is task decomposition")
 
     print("Now agent streaming starts..")
     for event in agent.stream(
