@@ -33,6 +33,7 @@ ALLOWED_HOSTS = ["*"]
 # Application definition
 
 INSTALLED_APPS = [
+    'daphne',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -41,6 +42,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     
     "rest_framework",
+    'channels',
     
     'document_store',
 ]
@@ -71,6 +73,8 @@ TEMPLATES = [
         },
     },
 ]
+
+ASGI_APPLICATION = "rag_app.asgi.application"
 
 WSGI_APPLICATION = 'rag_app.wsgi.application'
 
@@ -130,6 +134,15 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
+REDIS_HOST = config('REDIS_HOST')
+REDIS_PASSWORD = config('REDIS_PASSWORD')
+REDIS_PORT = config('REDIS_PORT')
+REDIS_DB = config('REDIS_DB')
+
+CELERY_BROKER_URL = f"redis://:{REDIS_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}"
+CELERY_RESULT_BACKEND = f"redis://:{REDIS_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}"
+
+
 REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.AllowAny',
@@ -137,6 +150,16 @@ REST_FRAMEWORK = {
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 25,
 }
+
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [f"redis://:{REDIS_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}"],
+        },
+    },
+}
+
 
 # File upload settings
 FILE_UPLOAD_MAX_MEMORY_SIZE = 10485760
