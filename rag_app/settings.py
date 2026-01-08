@@ -134,6 +134,9 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
+if not os.environ.get('OPENAI_API_KEY'):
+    os.environ['OPENAI_API_KEY'] = config('OPENAI_API_KEY')
+
 REDIS_HOST = config('REDIS_HOST')
 REDIS_PASSWORD = config('REDIS_PASSWORD')
 REDIS_PORT = config('REDIS_PORT')
