@@ -6,7 +6,7 @@
     "configurations": [
         
         {
-            "name": "Python Debugger: Django",
+            "name": "Django",
             "type": "debugpy",
             "request": "launch",
             "args": [
@@ -16,6 +16,24 @@
             "django": true,
             "autoStartBrowser": false,
             "program": "${workspaceFolder}/manage.py"
-        }
+        },
+         {
+        "name": "Python: Celery",
+        "type": "debugpy",
+        "request": "launch",
+        "module": "celery",
+        "console": "integratedTerminal",
+        "args": [
+            "-A",
+            "rag_app",
+            "worker",
+            "--queues",
+            "embedding_queue",
+            "-l",
+            "info",
+            "-P",
+            "solo",
+        ]
+    }
     ]
 }
