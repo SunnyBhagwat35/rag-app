@@ -12,7 +12,7 @@ class EmbeddingService:
     def generate_embeddings(self, chunks):
         
         embeddings = OpenAIEmbeddings(model="text-embedding-3-large")
-        
+            
         vector_store = Chroma(
             collection_name="rag_app_collection",
             embedding_function=embeddings,

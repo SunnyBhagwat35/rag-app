@@ -44,7 +44,8 @@ INSTALLED_APPS = [
     "rest_framework",
     'channels',
     
-    'document_store',
+    'document_store.apps.DocumentStoreConfig',
+    'aichat.apps.AichatConfig',
 ]
 
 MIDDLEWARE = [
