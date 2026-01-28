@@ -2,7 +2,6 @@ import json
 import os
 from django.db import transaction
 from channels.generic.websocket import WebsocketConsumer
-
 from aichat.services import RAGChatService
 from rag_app.settings import BASE_DIR
 from .models import UserChats

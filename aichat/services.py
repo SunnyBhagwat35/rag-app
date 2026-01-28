@@ -7,7 +7,7 @@ from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.runnables import RunnablePassthrough
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.messages import HumanMessage, AIMessage
-from django.conf import settings
+from rag_app.settings import BASE_DIR
 
 class RAGChatService:
     def __init__(self):
@@ -18,18 +18,19 @@ class RAGChatService:
         self.vector_store = Chroma(
             collection_name="rag_app_collection",
             embedding_function=self.embeddings,
-            persist_directory=os.path.join(settings.BASE_DIR, 'chroma_langchain_db'),
+            persist_directory=os.path.join(BASE_DIR, 'chroma_langchain_db'),
         )
         
         self.llm = ChatOpenAI(
             model="gpt-4o-mini",
             temperature=0.7,
+            
         )
         
         # Create retriever
         self.retriever = self.vector_store.as_retriever(
             search_type="similarity",
-            search_kwargs={"k": 4}  # retrieve top 4 most relevant chunks
+            search_kwargs={"k": 4}
         )
         
     def format_docs(self, docs):
@@ -51,21 +52,19 @@ class RAGChatService:
         """Create the RAG chain with chat history support"""
         
         # System prompt for RAG
-        system_prompt = """
-            You are a helpful AI assistant that answers questions based on the provided context from uploaded documents.
+        system_prompt = """You are a helpful AI assistant that answers questions based on the provided context from uploaded documents.
 
-            Use the following context to answer the user's question. If you cannot find the answer in the context, say so honestly - don't make up information.
+        Use the following context to answer the user's question. If you cannot find the answer in the context, say so honestly - don't make up information.
 
-            Context from documents:
-            {context}
+        Context from documents:
+        {context}
 
-            Instructions:
-            - Answer based primarily on the provided context
-            - Be concise but informative
-            - If the context doesn't contain enough information, acknowledge this
-            - You can use your general knowledge to supplement, but clearly distinguish this
-            - Cite specific parts of documents when relevant
-        """
+        Instructions:
+        - Answer based primarily on the provided context
+        - Be concise but informative
+        - If the context doesn't contain enough information, acknowledge this
+        - You can use your general knowledge to supplement, but clearly distinguish this
+        - Cite specific parts of documents when relevant"""
 
         prompt = ChatPromptTemplate.from_messages([
             ("system", system_prompt),
@@ -73,16 +72,31 @@ class RAGChatService:
             ("human", "{question}")
         ])
         
-        # Create the RAG chain
+        # Create the RAG chain with proper input handling
+        def get_question(x):
+            """Extract question string from input"""
+            if isinstance(x, dict):
+                return x.get("question", "")
+            return str(x)
+        
+        def get_history(x):
+            """Extract chat history from input"""
+            if isinstance(x, dict):
+                return x.get("chat_history", [])
+            return []
+        
+        # Create retrieval chain that only uses the question string
+        retrieval_chain = (
+            RunnablePassthrough.assign(
+                context=lambda x: self.format_docs(
+                    self.retriever.invoke(get_question(x))
+                )
+            )
+        )
+        
+        # Complete RAG chain
         rag_chain = (
-            {
-                "context": self.retriever | self.format_docs,
-                "question": RunnablePassthrough(),
-                "chat_history": lambda x: x.get("chat_history", [])
-            }
-            | prompt
-            | self.llm
-            | StrOutputParser()
+            retrieval_chain | prompt | self.llm | StrOutputParser()
         )
         
         return rag_chain
@@ -103,8 +117,8 @@ class RAGChatService:
             Dict with 'answer' and 'source_documents'
         """
         try:
-            # Get relevant documents
-            source_docs = self.retriever.invoke(question)
+            # Get relevant documents using just the question string
+            # source_docs = self.retriever.invoke(question)
             
             # Format chat history if provided
             formatted_history = []
@@ -114,6 +128,7 @@ class RAGChatService:
             # Create and invoke RAG chain
             rag_chain = self.create_rag_chain()
             
+            # Invoke with properly structured input
             answer = rag_chain.invoke({
                 "question": question,
                 "chat_history": formatted_history
@@ -121,16 +136,18 @@ class RAGChatService:
             
             return {
                 "answer": answer,
-                "source_documents": [
-                    {
-                        "content": doc.page_content,
-                        "metadata": doc.metadata
-                    }
-                    for doc in source_docs
-                ]
+                # "source_documents": [
+                #     {
+                #         "content": doc.page_content,
+                #         "metadata": doc.metadata
+                #     }
+                #     for doc in source_docs
+                # ]
             }
             
         except Exception as e:
+            import traceback
+            print(f"Error in get_response: {str(e)}")
             print(traceback.format_exc())
             return {
                 "answer": f"I encountered an error while processing your question: {str(e)}",
@@ -139,11 +156,15 @@ class RAGChatService:
     
     def get_relevant_documents(self, query: str, k: int = 4) -> List[Dict]:
         """Get relevant documents without generating a response"""
-        docs = self.vector_store.similarity_search(query, k=k)
-        return [
-            {
-                "content": doc.page_content,
-                "metadata": doc.metadata
-            }
-            for doc in docs
-        ]
+        try:
+            docs = self.vector_store.similarity_search(query, k=k)
+            return [
+                {
+                    "content": doc.page_content,
+                    "metadata": doc.metadata
+                }
+                for doc in docs
+            ]
+        except Exception as e:
+            print(f"Error in get_relevant_documents: {str(e)}")
+            return []
